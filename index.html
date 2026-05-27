@@ -1,0 +1,1044 @@
+<!DOCTYPE html><html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>工业安全生产实时监控系统</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Microsoft YaHei', 'Segoe UI', Arial, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            min-height: 100vh;
+            color: #fff;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+
+        /* 头部样式 */
+        .header {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 20px 30px;
+            margin-bottom: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .logo {
+            font-size: 40px;
+            animation: rotate 3s linear infinite;
+        }
+
+        @keyframes rotate {
+            0%, 100% { transform: rotate(0deg); }
+            25% { transform: rotate(10deg); }
+            75% { transform: rotate(-10deg); }
+        }
+
+        .title {
+            font-size: 28px;
+            font-weight: bold;
+            background: linear-gradient(45deg, #00d2ff, #3a7bd5);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .status-badge {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: rgba(0, 0, 0, 0.3);
+            padding: 10px 20px;
+            border-radius: 30px;
+        }
+
+        .status-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            animation: pulse 1.5s infinite;
+        }
+
+        .status-dot.online {
+            background: #4CAF50;
+            box-shadow: 0 0 20px #4CAF50;
+        }
+
+        .status-dot.warning {
+            background: #FF9800;
+            box-shadow: 0 0 20px #FF9800;
+        }
+
+        .status-dot.danger {
+            background: #f44336;
+            box-shadow: 0 0 20px #f44336;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .time-display {
+            font-size: 16px;
+            color: #aaa;
+        }
+
+        /* 主布局 */
+        .main-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        /* 视频面板 */
+        .video-panel {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+
+        .video-container {
+            position: relative;
+            border-radius: 15px;
+            overflow: hidden;
+            background: #000;
+            margin-bottom: 15px;
+            aspect-ratio: 4/3;
+            min-height: 400px;
+        }
+
+        #videoElement {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        #overlayCanvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+
+        .camera-overlay-info {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 8px 15px;
+            border-radius: 8px;
+            font-size: 12px;
+            z-index: 10;
+        }
+
+        .camera-controls {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 12px;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .btn-start {
+            background: linear-gradient(135deg, #4CAF50, #45a049);
+            color: white;
+        }
+        .btn-start:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(76, 175, 80, 0.4);
+        }
+
+        .btn-stop {
+            background: linear-gradient(135deg, #f44336, #d32f2f);
+            color: white;
+        }
+        .btn-stop:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(244, 67, 54, 0.4);
+        }
+
+        .btn-snapshot {
+            background: linear-gradient(135deg, #2196F3, #1976D2);
+            color: white;
+        }
+        .btn-snapshot:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(33, 150, 243, 0.4);
+        }
+
+        .btn-report {
+            background: linear-gradient(135deg, #FF9800, #F57C00);
+            color: white;
+        }
+        .btn-report:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(255, 152, 0, 0.4);
+        }
+
+        /* 统计面板 */
+        .stats-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .stat-card {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            text-align: center;
+            transition: all 0.3s;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.4);
+        }
+
+        .stat-card.score-card {
+            background: linear-gradient(135deg, rgba(76, 175, 80, 0.3), rgba(69, 160, 73, 0.1));
+        }
+
+        .stat-card.warning-card {
+            background: linear-gradient(135deg, rgba(255, 152, 0, 0.3), rgba(245, 124, 0, 0.1));
+        }
+
+        .stat-card.danger-card {
+            background: linear-gradient(135deg, rgba(244, 67, 54, 0.3), rgba(211, 47, 47, 0.1));
+        }
+
+        .stat-icon {
+            font-size: 35px;
+            margin-bottom: 10px;
+        }
+
+        .stat-value {
+            font-size: 42px;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+
+        .stat-value.score {
+            background: linear-gradient(45deg, #00d2ff, #3a7bd5);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .stat-value.warning {
+            color: #FF9800;
+        }
+
+        .stat-value.danger {
+            color: #f44336;
+        }
+
+        .stat-value.success {
+            color: #4CAF50;
+        }
+
+        .stat-label {
+            font-size: 14px;
+            opacity: 0.8;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        /* 底部面板 */
+        .bottom-panel {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+
+        .panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .alert-list {
+            max-height: 250px;
+            overflow-y: auto;
+            padding-right: 10px;
+        }
+
+        .alert-list::-webkit-scrollbar {
+            width: 5px;
+        }
+
+        .alert-list::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 5px;
+        }
+
+        .alert-list::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 5px;
+        }
+
+        .alert-item {
+            display: flex;
+            align-items: center;
+            padding: 12px;
+            margin: 8px 0;
+            border-radius: 10px;
+            animation: slideInRight 0.5s ease-out;
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .alert-item.critical {
+            border-left: 4px solid #f44336;
+            background: rgba(244, 67, 54, 0.1);
+        }
+
+        .alert-item.warning {
+            border-left: 4px solid #FF9800;
+            background: rgba(255, 152, 0, 0.1);
+        }
+
+        .alert-item.info {
+            border-left: 4px solid #2196F3;
+            background: rgba(33, 150, 243, 0.1);
+        }
+
+        .alert-item.success {
+            border-left: 4px solid #4CAF50;
+            background: rgba(76, 175, 80, 0.1);
+        }
+
+        @keyframes slideInRight {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        .alert-icon {
+            font-size: 24px;
+            margin-right: 12px;
+        }
+
+        .alert-content {
+            flex: 1;
+        }
+
+        .alert-message {
+            font-weight: bold;
+            margin-bottom: 4px;
+        }
+
+        .alert-time {
+            font-size: 12px;
+            opacity: 0.6;
+        }
+
+        /* 弹窗样式 */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+            backdrop-filter: blur(5px);
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: linear-gradient(135deg, #1a1a2e, #16213e);
+            padding: 30px;
+            border-radius: 20px;
+            max-width: 500px;
+            width: 90%;
+            text-align: center;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+            animation: modalIn 0.3s ease-out;
+        }
+
+        @keyframes modalIn {
+            from {
+                transform: scale(0.8);
+                opacity: 0;
+            }
+            to {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+
+        .modal-icon {
+            font-size: 60px;
+            margin-bottom: 20px;
+        }
+
+        .modal-title {
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 15px;
+        }
+
+        .modal-message {
+            font-size: 16px;
+            margin-bottom: 20px;
+            opacity: 0.8;
+        }
+
+        .modal-close {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            padding: 12px 30px;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .modal-close:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.4);
+        }
+
+        /* 响应式设计 */
+        @media (max-width: 1024px) {
+            .main-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .header {
+                flex-direction: column;
+                gap: 15px;
+            }
+            
+            .title {
+                font-size: 22px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- 头部 -->
+        <div class="header">
+            <div class="header-left">
+                <div class="logo">🏭</div>
+                <div>
+                    <div class="title">工业安全生产实时监控系统</div>
+                    <div style="font-size: 12px; opacity: 0.7; margin-top: 5px;">
+                        Industrial Safety Real-time Monitoring System
+                    </div>
+                </div>
+            </div>
+            <div class="header-right">
+                <div class="status-badge">
+                    <div class="status-dot online" id="statusDot"></div>
+                    <span id="statusText">系统就绪</span>
+                </div>
+                <div class="time-display" id="currentTime"></div>
+            </div>
+        </div>
+
+        <!-- 主内容区 -->
+        <div class="main-grid">
+            <!-- 视频监控 -->
+            <div class="video-panel">
+                <div class="video-container" id="videoContainer">
+                    <video id="videoElement" autoplay playsinline></video>
+                    <canvas id="overlayCanvas"></canvas>
+                    <div class="camera-overlay-info">
+                        📹 <span id="cameraLabel">摄像头未启动</span>
+                    </div>
+                </div>
+                <div class="camera-controls">
+                    <button class="btn btn-start" id="btnStart" onclick="startMonitoring()">
+                        ▶️ 开始监控
+                    </button>
+                    <button class="btn btn-stop" id="btnStop" onclick="stopMonitoring()" disabled>
+                        ⏹️ 停止监控
+                    </button>
+                    <button class="btn btn-snapshot" onclick="takeSnapshot()" disabled id="btnSnapshot">
+                        📸 截图
+                    </button>
+                    <button class="btn btn-report" onclick="generateReport()">
+                        📊 生成报告
+                    </button>
+                </div>
+            </div>
+
+            <!-- 统计面板 -->
+            <div class="stats-panel">
+                <div class="stat-card score-card">
+                    <div class="stat-icon">🛡️</div>
+                    <div class="stat-value score" id="safetyScore">100</div>
+                    <div class="stat-label">安全评分</div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-icon">👷</div>
+                    <div class="stat-value success" id="workerCount">0</div>
+                    <div class="stat-label">检测到工人</div>
+                </div>
+
+                <div class="stat-card warning-card">
+                    <div class="stat-icon">⛑️</div>
+                    <div class="stat-value warning" id="helmetViolations">0</div>
+                    <div class="stat-label">安全帽违规</div>
+                </div>
+
+                <div class="stat-card danger-card">
+                    <div class="stat-icon">⚠️</div>
+                    <div class="stat-value danger" id="zoneViolations">0</div>
+                    <div class="stat-label">危险区域违规</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 底部报警面板 -->
+        <div class="bottom-panel">
+            <div class="panel-header">
+                <h2>📋 实时报警记录</h2>
+                <span style="opacity: 0.7;" id="alertCount">0 条记录</span>
+            </div>
+            <div class="alert-list" id="alertList">
+                <div class="alert-item info">
+                    <div class="alert-icon">ℹ️</div>
+                    <div class="alert-content">
+                        <div class="alert-message">系统已启动</div>
+                        <div class="alert-time">等待开始监控...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 报警弹窗 -->
+    <div class="modal" id="alertModal">
+        <div class="modal-content">
+            <div class="modal-icon" id="modalIcon">🚨</div>
+            <div class="modal-title" id="modalTitle">安全警告</div>
+            <div class="modal-message" id="modalMessage">检测到安全隐患！</div>
+            <button class="modal-close" onclick="closeModal()">确认</button>
+        </div>
+    </div>
+
+    <script>
+        // 全局变量
+        let videoElement;
+        let overlayCanvas;
+        let overlayCtx;
+        let isMonitoring = false;
+        let animationId;
+        let mediaStream = null;
+        
+        // 统计数据
+        let stats = {
+            safetyScore: 100,
+            workerCount: 0,
+            helmetViolations: 0,
+            zoneViolations: 0,
+            totalChecks: 0,
+            startTime: null,
+            alerts: []
+        };
+
+        // 危险区域定义（相对坐标 0-1）
+        const dangerZones = [
+            { x: 0.1, y: 0.1, w: 0.2, h: 0.2, name: '高空作业区', level: 'HIGH' },
+            { x: 0.6, y: 0.6, w: 0.3, h: 0.3, name: '重型机械区', level: 'CRITICAL' },
+            { x: 0.35, y: 0.35, w: 0.3, h: 0.3, name: '电气危险区', level: 'MEDIUM' }
+        ];
+
+        // 安全帽颜色配置
+        const helmetColors = [
+            { name: '黄色', lower: [20, 100, 100], upper: [30, 255, 255] },
+            { name: '白色', lower: [0, 0, 200], upper: [180, 30, 255] },
+            { name: '蓝色', lower: [100, 50, 50], upper: [130, 255, 255] },
+            { name: '橙色', lower: [5, 50, 50], upper: [15, 255, 255] },
+            { name: '红色', lower: [0, 50, 50], upper: [10, 255, 255] }
+        ];
+
+        // 模拟人员数据（用于演示）
+        let simulatedWorkers = [];
+
+        // 初始化
+        window.onload = function() {
+            videoElement = document.getElementById('videoElement');
+            overlayCanvas = document.getElementById('overlayCanvas');
+            overlayCtx = overlayCanvas.getContext('2d');
+            
+            // 更新时钟
+            updateTime();
+            setInterval(updateTime, 1000);
+            
+            // 初始化模拟人员
+            initSimulatedWorkers();
+            
+            // 添加键盘监听
+            document.addEventListener('keydown', handleKeyboard);
+            
+            console.log('✅ 系统初始化完成');
+        };
+
+        // 初始化模拟人员
+        function initSimulatedWorkers() {
+            simulatedWorkers = [
+                {
+                    id: 1,
+                    x: 0.3, y: 0.4,
+                    vx: 0.002, vy: 0.001,
+                    hasHelmet: true,
+                    helmetColor: '黄色',
+                    helmetConfidence: 0.9
+                },
+                {
+                    id: 2,
+                    x: 0.5, y: 0.5,
+                    vx: -0.001, vy: 0.002,
+                    hasHelmet: Math.random() > 0.3,
+                    helmetColor: Math.random() > 0.3 ? '白色' : null,
+                    helmetConfidence: Math.random() * 0.5 + 0.5
+                },
+                {
+                    id: 3,
+                    x: 0.7, y: 0.6,
+                    vx: 0.001, vy: -0.001,
+                    hasHelmet: Math.random() > 0.3,
+                    helmetColor: Math.random() > 0.3 ? '蓝色' : null,
+                    helmetConfidence: Math.random() * 0.5 + 0.5
+                }
+            ];
+        }
+
+        // 启动监控
+        async function startMonitoring() {
+            try {
+                // 请求摄像头权限
+                mediaStream = await navigator.mediaDevices.getUserMedia({
+                    video: {
+                        width: { ideal: 1280 },
+                        height: { ideal: 720 },
+                        facingMode: 'environment'
+                    },
+                    audio: false
+                });
+                
+                videoElement.srcObject = mediaStream;
+                await videoElement.play();
+                
+                // 设置canvas大小
+                videoElement.onloadedmetadata = () => {
+                    overlayCanvas.width = videoElement.videoWidth || 640;
+                    overlayCanvas.height = videoElement.videoHeight || 480;
+                };
+                
+                isMonitoring = true;
+                stats.startTime = Date.now();
+                
+                // 更新UI
+                updateUIState(true);
+                document.getElementById('cameraLabel').textContent = '摄像头监控中';
+                
+                // 添加警报
+                addAlert('success', '✅ 监控系统已启动', '摄像头实时监控开始');
+                
+                // 开始处理循环
+                processFrame();
+                
+            } catch (error) {
+                console.error('摄像头访问失败:', error);
+                addAlert('critical', '❌ 摄像头访问失败', error.message);
+                
+                // 如果摄像头不可用，使用模拟模式
+                if (confirm('无法访问摄像头。是否使用模拟模式进行演示？')) {
+                    startSimulationMode();
+                }
+            }
+        }
+
+        // 停止监控
+        function stopMonitoring() {
+            isMonitoring = false;
+            
+            if (animationId) {
+                cancelAnimationFrame(animationId);
+            }
+            
+            if (mediaStream) {
+                mediaStream.getTracks().forEach(track => track.stop());
+                mediaStream = null;
+            }
+            
+            videoElement.srcObject = null;
+            
+            // 清除canvas
+            overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+            
+            updateUIState(false);
+            document.getElementById('cameraLabel').textContent = '摄像头已停止';
+            
+            addAlert('warning', '⏹️ 监控已停止', '系统暂停运行');
+        }
+
+        // 模拟模式
+        function startSimulationMode() {
+            isMonitoring = true;
+            stats.startTime = Date.now();
+            
+            updateUIState(true);
+            document.getElementById('cameraLabel').textContent = '模拟监控模式';
+            
+            addAlert('info', '🔄 进入模拟模式', '使用虚拟数据进行演示');
+            
+            processSimulatedFrame();
+        }
+
+        // 处理真实视频帧
+        function processFrame() {
+            if (!isMonitoring) return;
+            
+            // 检测人员（这里是模拟检测，实际应用中应使用AI模型）
+            detectWorkersInFrame();
+            
+            // 绘制覆盖层
+            drawOverlay();
+            
+            // 更新统计
+            updateStats();
+            
+            // 继续循环
+            animationId = requestAnimationFrame(processFrame);
+        }
+
+        // 处理模拟帧
+        function processSimulatedFrame() {
+            if (!isMonitoring) return;
+            
+            // 更新模拟人员位置
+            updateSimulatedWorkers();
+            
+            // 检测
+            detectSimulatedWorkers();
+            
+            // 绘制
+            drawSimulatedOverlay();
+            
+            // 更新统计
+            updateStats();
+            
+            // 继续循环
+            setTimeout(() => {
+                animationId = requestAnimationFrame(processSimulatedFrame);
+            }, 100);
+        }
+
+        // 更新模拟人员位置
+        function updateSimulatedWorkers() {
+            simulatedWorkers.forEach(worker => {
+                worker.x += worker.vx;
+                worker.y += worker.vy;
+                
+                // 边界反弹
+                if (worker.x < 0.1 || worker.x > 0.9) worker.vx *= -1;
+                if (worker.y < 0.1 || worker.y > 0.9) worker.vy *= -1;
+                
+                // 随机改变方向
+                if (Math.random() < 0.02) {
+                    worker.vx += (Math.random() - 0.5) * 0.005;
+                    worker.vy += (Math.random() - 0.5) * 0.005;
+                }
+                
+                // 随机改变安全帽状态
+                if (Math.random() < 0.005) {
+                    worker.hasHelmet = !worker.hasHelmet;
+                    if (!worker.hasHelmet) {
+                        worker.helmetColor = null;
+                        worker.helmetConfidence = 0;
+                        triggerHelmetAlert(worker.id);
+                    } else {
+                        worker.helmetColor = helmetColors[Math.floor(Math.random() * helmetColors.length)].name;
+                        worker.helmetConfidence = Math.random() * 0.3 + 0.7;
+                    }
+                }
+            });
+        }
+
+        // 检测真实帧中的工人
+        function detectWorkersInFrame() {
+            // 这里是模拟检测逻辑
+            // 在实际应用中，应使用TensorFlow.js或其他AI模型进行实时检测
+            stats.workerCount = Math.floor(Math.random() * 3) + 1;
+            stats.helmetViolations = Math.random() > 0.7 ? 1 : 0;
+            stats.zoneViolations = Math.random() > 0.8 ? 1 : 0;
+        }
+
+        // 检测模拟工人
+        function detectSimulatedWorkers() {
+            let helmetViolations = 0;
+            let zoneViolations = 0;
+            
+            simulatedWorkers.forEach(worker => {
+                if (!worker.hasHelmet) helmetViolations++;
+                
+                // 检查危险区域
+                dangerZones.forEach(zone => {
+                    if (worker.x > zone.x && worker.x < zone.x + zone.w &&
+                        worker.y > zone.y && worker.y < zone.y + zone.h) {
+                        zoneViolations++;
+                        if (Math.random() < 0.1) {
+                            triggerZoneAlert(worker.id, zone.name);
+                        }
+                    }
+                });
+            });
+            
+            stats.workerCount = simulatedWorkers.length;
+            stats.helmetViolations = helmetViolations;
+            stats.zoneViolations = zoneViolations;
+        }
+
+        // 绘制覆盖层
+        function drawOverlay() {
+            overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+            
+            const w = overlayCanvas.width;
+            const h = overlayCanvas.height;
+            
+            // 绘制危险区域
+            drawDangerZones(w, h);
+            
+            // 模拟绘制检测框
+            for (let i = 0; i < stats.workerCount; i++) {
+                const x = (0.3 + i * 0.2) * w;
+                const y = (0.4 + Math.random() * 0.2) * h;
+                const hasHelmet = i < stats.workerCount - stats.helmetViolations;
+                
+                drawDetectionBox(x, y, hasHelmet);
+            }
+            
+            // 绘制信息面板
+            drawInfoPanel(w, h);
+        }
+
+        // 绘制模拟覆盖层
+        function drawSimulatedOverlay() {
+            overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+            
+            const w = overlayCanvas.width;
+            const h = overlayCanvas.height;
+            
+            // 背景
+            overlayCtx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+            overlayCtx.fillRect(0, 0, w, h);
+            
+            // 绘制网格
+            overlayCtx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+            overlayCtx.lineWidth = 1;
+            for (let i = 0; i < w; i += 50) {
+                overlayCtx.beginPath();
+                overlayCtx.moveTo(i, 0);
+                overlayCtx.lineTo(i, h);
+                overlayCtx.stroke();
+            }
+            for (let i = 0; i < h; i += 50) {
+                overlayCtx.beginPath();
+                overlayCtx.moveTo(0, i);
+                overlayCtx.lineTo(w, i);
+                overlayCtx.stroke();
+            }
+            
+            // 绘制危险区域
+            drawDangerZones(w, h);
+            
+            // 绘制模拟工人
+            simulatedWorkers.forEach(worker => {
+                const x = worker.x * w;
+                const y = worker.y * h;
+                drawSimulatedWorker(x, y, worker);
+            });
+            
+            // 绘制信息面板
+            drawInfoPanel(w, h);
+        }
+
+        // 绘制危险区域
+        function drawDangerZones(w, h) {
+            dangerZones.forEach(zone => {
+                const x = zone.x * w;
+                const y = zone.y * h;
+                const zw = zone.w * w;
+                const zh = zone.h * h;
+                
+                // 填充
+                overlayCtx.fillStyle = zone.level === 'CRITICAL' ? 
+                    'rgba(255, 0, 0, 0.15)' : 'rgba(255, 165, 0, 0.1)';
+                overlayCtx.fillRect(x, y, zw, zh);
+                
+                // 边框（闪烁）
+                const alpha = 0.5 + Math.sin(Date.now() / 500) * 0.3;
+                overlayCtx.strokeStyle = zone.level === 'CRITICAL' ?
+                    `rgba(255, 0, 0, ${alpha})` : `rgba(255, 165, 0, ${alpha})`;
+                overlayCtx.lineWidth = 2;
+                overlayCtx.setLineDash([5, 5]);
+                overlayCtx.strokeRect(x, y, zw, zh);
+                overlayCtx.setLineDash([]);
+                
+                // 标签
+                overlayCtx.fillStyle = zone.level === 'CRITICAL' ? '#ff0000' : '#ffa500';
+                overlayCtx.font = 'bold 12px Arial';
+                overlayCtx.fillText(`⚠ ${zone.name}`, x + 5, y - 5);
+            });
+        }
+
+        // 绘制检测框
+        function drawDetectionBox(x, y, hasHelmet) {
+            const boxWidth = 80;
+            const boxHeight = 120;
+            
+            overlayCtx.strokeStyle = hasHelmet ? '#4CAF50' : '#f44336';
+            overlayCtx.lineWidth = 2;
+            overlayCtx.strokeRect(x - boxWidth/2, y - boxHeight/2, boxWidth, boxHeight);
+            
+            // 状态标签
+            overlayCtx.fillStyle = hasHelmet ? '#4CAF50' : '#f44336';
+            overlayCtx.font = 'bold 14px Arial';
+            overlayCtx.fillText(hasHelmet ? '✓ 安全帽' : '✗ 未佩戴', 
+                               x - boxWidth/2, y - boxHeight/2 - 10);
+        }
+
+        // 绘制模拟工人
+        function drawSimulatedWorker(x, y, worker) {
+            const size = 40;
+            
+            // 身体
+            overlayCtx.fillStyle = '#666';
+            overlayCtx.fillRect(x - size/4, y - size/2, size/2, size);
+            
+            // 头部
+            overlayCtx.beginPath();
+            overlayCtx.arc(x, y - size/2 - 10, size/3, 0, Math.PI * 2);
+            overlayCtx.fillStyle = '#FFD700';
+            overlayCtx.fill();
+            
+            if (worker.hasHelmet) {
+                // 安全帽
+                overlayCtx.fillStyle = getHelmetColor(worker.helmetColor);
+                overlayCtx.beginPath();
+                overlayCtx.arc(x, y - size/2 - 15, size/3 + 5, Math.PI, 0);
+                overlayCtx.fill();
+                overlayCtx.fillRect(x - size/3 - 5, y - size/2 - 15, size*2/3 + 10, 5);
+            }
+            
+            // 状态标记
+            overlayCtx.fillStyle = worker.hasHelmet ? '#4CAF50' : '#f44336';
+            overlayCtx.font = 'bold 16px Arial';
+            overlayCtx.fillText(worker.hasHelmet ? '✓' : '✗', x - 5, y - size/2 - 20);
+            
+            // ID标签
+            overlayCtx.fillStyle = '#fff';
+            overlayCtx.font = '12px Arial';
+            overlayCtx.fillText(`#${worker.id}`, x - 10, y + size/2 + 20);
+            
+            // 危险区域警告
+            dangerZones.forEach(zone => {
+                const zx = zone.x * overlayCanvas.width;
+                const zy = zone.y * overlayCanvas.height;
+                const zw = zone.w * overlayCanvas.width;
+                const zh = zone.h * overlayCanvas.height;
+                
+                if (x > zx && x < zx + zw && y > zy && y < zy + zh) {
+                    overlayCtx.fillStyle = '#ff6600';
+                    overlayCtx.font = 'bold 12px Arial';
+                    overlayCtx.fillText('⚠ DANGER', x - 25, y - size/2 - 40);
+                }
+            });
+        }
+
+        // 获取安全帽颜色
+        function getHelmetColor(colorName) {
+            const colorMap = {
+                '黄色': '#FFD700',
+                '白色': '#FFFFFF',
+                '蓝色': '#4169E1',
+                '橙色': '#FF8C00',
+                '红色': '#FF0000'
+            };
+            return colorMap[colorName] || '#FFD700';
+        }
+
+        // 绘制信息面板
+        function drawInfoPanel(w, h) {
+            const panelW = 200;
+            const panelH = 140;
+            const panelX =
